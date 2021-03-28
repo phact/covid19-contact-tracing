@@ -1,0 +1,65 @@
+create KEYSPACE covid19 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3 }; 
+
+CREATE TABLE IF NOT EXISTS covid19.tests_kv (
+    test_id uuid,
+    payload text,
+    PRIMARY KEY (test_id)
+);
+
+CREATE TABLE IF NOT EXISTS covid19.tests (
+    test_id uuid,
+    person_id uuid,
+    result boolean,
+    time_taken timestamp,
+    time_result timestamp,
+    PRIMARY KEY (test_id)
+);
+
+CREATE TABLE covid19.device (
+    device_id text,
+    last_sync timestamp,
+    PRIMARY KEY (device_id)
+)
+WITH VERTEX LABEL device;
+
+CREATE TABLE covid19.person (
+    person_id uuid,
+    country text,
+    zip_code text,
+    lat text,
+    lon text,
+    age int,
+    PRIMARY KEY (person_id)
+) WITH VERTEX LABEL person;
+
+CREATE TABLE covid19.device_contact (
+    device1_id text,
+    time timestamp,
+    device2_id text,
+    duration_sec int,
+    PRIMARY KEY (device1_id, time, device2_id)
+) WITH CLUSTERING ORDER BY (time DESC, device2_id ASC)
+AND EDGE LABEL contact FROM device(device1_id) TO device(device2_id);
+
+CREATE MATERIALIZED VIEW covid19.device_contact_inverse AS
+    SELECT *
+    FROM covid19.device_contact
+    WHERE device2_id IS NOT NULL AND time IS NOT NULL AND device1_id IS NOT NULL
+    PRIMARY KEY (device2_id, time, device1_id)
+    WITH CLUSTERING ORDER BY (time DESC, device1_id ASC);
+
+CREATE TABLE covid19.person_owns_device (
+    person_id uuid,
+    device_id text,
+    claimed_on timestamp,
+    PRIMARY KEY (person_id, device_id)
+) WITH CLUSTERING ORDER BY (device_id ASC)
+    AND EDGE LABEL own FROM person(person_id) TO device(device_id);
+
+CREATE MATERIALIZED VIEW covid19.device_ownedby_person AS
+    SELECT *
+    FROM covid19.person_owns_device
+    WHERE device_id IS NOT NULL AND person_id IS NOT NULL
+    PRIMARY KEY (device_id, person_id)
+    WITH CLUSTERING ORDER BY (person_id ASC);
+
