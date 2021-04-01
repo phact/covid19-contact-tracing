@@ -53,8 +53,8 @@ public class DeviceContact {
     public static Stream<DeviceContact> getDeviceContacts(Simulator.Encounter encounter) {
         List<DeviceContact> contacts = new ArrayList<>(2);
 
-        String device1Id = PersonDevice.toDevideId((int)encounter.timestamp & 1, encounter.person1);
-        String device2Id = PersonDevice.toDevideId((int)encounter.timestamp>>2 & 1, encounter.person2);
+        String device1Id = PersonDevice.toDivideId((int)encounter.timestamp & 1, encounter.person1);
+        String device2Id = PersonDevice.toDivideId((int)encounter.timestamp>>2 & 1, encounter.person2);
         Instant timestamp = Instant.ofEpochMilli(encounter.timestamp);
 
         //Capture the encounter from the perspective of both devices subject to noise (i.e. recording probability)

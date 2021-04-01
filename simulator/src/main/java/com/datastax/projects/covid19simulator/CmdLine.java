@@ -1,11 +1,9 @@
 package com.datastax.projects.covid19simulator;
 
 import com.datastax.projects.covid19simulator.csv.AnnotationStrategy;
-import com.datastax.projects.covid19simulator.export.Device;
-import com.datastax.projects.covid19simulator.export.DeviceContact;
-import com.datastax.projects.covid19simulator.export.Person;
-import com.datastax.projects.covid19simulator.export.PersonDevice;
-import com.opencsv.bean.HeaderColumnNameTranslateMappingStrategy;
+import com.datastax.projects.covid19simulator.export.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.bean.StatefulBeanToCsv;
 import com.opencsv.bean.StatefulBeanToCsvBuilder;
 import com.opencsv.exceptions.CsvException;
@@ -20,11 +18,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 public class CmdLine {
 
     public static final String PEOPLE_FILENAME = "people.csv";
+    public static final String TESTS_FILENAME = "tests.csv";
+    public static final String TESTS_KV_FILENAME = "tests_kv.csv";
     public static final String DEVICE_FILENAME = "device.csv";
     public static final String PEOPLE_TO_DEVICE_FILENAME = "people_device.csv";
     public static final String DEVICE_CONTACT_FILENAME = "device_contact.csv";
@@ -48,35 +49,55 @@ public class CmdLine {
         int numPeople = config.get(SimulatorOption.PEOPLE);
 
         //Write out all people
-        writeStream2CSV(IntStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new Person(i)),
-                Person.class,filenamePrefix + PEOPLE_FILENAME);
+        writeStream2CSV(
+                LongStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new Person(i)),
+                Person.class,filenamePrefix + PEOPLE_FILENAME
+        );
+
+        //Write out all tests tabular
+        long testCount = (long) Math.floor(numPeople * 0.23);
+        writeStream2CSV(
+                LongStream.iterate(0, i -> i + 1).limit(testCount).mapToObj(i -> new CovidTestKV(i)),
+                CovidTestKV.class,filenamePrefix + TESTS_KV_FILENAME
+        );
+
+        //Write out all tests tabular
+        writeStream2CSV(
+                LongStream.iterate(0, i -> i + 1).limit(testCount).mapToObj(i -> new CovidTest(i)),
+                CovidTest.class,filenamePrefix + TESTS_FILENAME
+        );
 
         //Write out all devices
+        Stream<Device> deviceStream = Stream.concat(
+                LongStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new Device(0, i)),
+                LongStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new Device(1, i))
+        );
         writeStream2CSV(
-                Stream.concat(
-                    IntStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new Device(0, i)),
-                    IntStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new Device(1, i))
-                 ),
-                 Device.class,filenamePrefix + DEVICE_FILENAME);
+                deviceStream,
+                Device.class,filenamePrefix + DEVICE_FILENAME
+        );
 
         //Write out the people->device mapping
         writeStream2CSV(
                 Stream.concat(
-                    IntStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new PersonDevice(0,i)),
-                    IntStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new PersonDevice(1,i))
+                    LongStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new PersonDevice(0,i)),
+                    LongStream.iterate(0, i -> i + 1).limit(numPeople).mapToObj(i -> new PersonDevice(1,i))
                 ),
-                PersonDevice.class,filenamePrefix + PEOPLE_TO_DEVICE_FILENAME);
+                PersonDevice.class,filenamePrefix + PEOPLE_TO_DEVICE_FILENAME
+        );
 
         //Write out the device contacts mapping
         Simulator sim = new Simulator(config);
-        writeStream2CSV(sim.stream().flatMap(e -> DeviceContact.getDeviceContacts(e)),
-                DeviceContact.class, filenamePrefix + DEVICE_CONTACT_FILENAME);
+        writeStream2CSV(
+                sim.stream().flatMap(e -> DeviceContact.getDeviceContacts(e)),
+                DeviceContact.class, filenamePrefix + DEVICE_CONTACT_FILENAME
+        );
     }
 
     public static<T> void writeStream2CSV(Stream<T> beanStream, Class<T> clazz, String filename) {
         File file = new File(filename);
         try (FileWriter writer = new FileWriter(file)) {
-            StatefulBeanToCsv beanToCsv = new StatefulBeanToCsvBuilder(writer).withMappingStrategy(new AnnotationStrategy(clazz)).build();
+            StatefulBeanToCsv beanToCsv = new StatefulBeanToCsvBuilder(writer).withEscapechar('\\').withMappingStrategy(new AnnotationStrategy(clazz)).build();
             beanToCsv.write(beanStream);
         } catch (IOException e) {
             System.err.println("Could not write csv file: " + e.getMessage());

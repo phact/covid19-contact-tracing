@@ -5,38 +5,50 @@
 example:
 Test result
 
-### OLTP Tabular
+### Tabular
 
 example: 
 Test result
 
-### OLTP Document
+### Relational
 
 example: 
-Count positive results by week
+Join + Group By - how many people over 45 had a negative test by geography
 
-### OLAP Tabular / Relational
-
-example: 
-Count negative and positive results
-
-### OLTP Graph
+### Graph
 
 example: 
-Person -> Device -> Contact neighborhood
+Contact Tracing Neighborhood- Person -> Device -> Contact neighborhood
 
-### Temporal OLTP Graph
-
-example: 
-Person -> Device -> Contact neighborhood within 14 days
-
-### GeoTemporal OLTP Graph
+### Geo Temporal Graph
 
 example: 
-Contact neighborhood home sanity check / travel analysis
+Contract Tracing- Person -> Device -> Contact neighborhood within a time period
+
+example: 
+People by geography
 
 
-### OLAP Graph
+### OLAP Graph ?
 
 example:
 Centrality?
+
+### Document
+
+example: 
+Schemaless vaccine app
+
+### Rest
+
+example: 
+
+### GraphQL
+
+example: 
+
+### Low Code / No Code
+
+example: 
+
+

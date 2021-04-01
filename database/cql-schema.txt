@@ -1,4 +1,6 @@
-create KEYSPACE covid19 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3 }; 
+drop keyspace covid19;
+
+create KEYSPACE IF NOT EXISTS covid19 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3 } AND graph_engine='core'; 
 
 CREATE TABLE IF NOT EXISTS covid19.tests_kv (
     test_id uuid,
@@ -15,24 +17,27 @@ CREATE TABLE IF NOT EXISTS covid19.tests (
     PRIMARY KEY (test_id)
 );
 
-CREATE TABLE covid19.device (
+CREATE TABLE IF NOT EXISTS covid19.device (
     device_id text,
     last_sync timestamp,
     PRIMARY KEY (device_id)
 )
 WITH VERTEX LABEL device;
 
-CREATE TABLE covid19.person (
+CREATE TABLE IF NOT EXISTS covid19.person (
     person_id uuid,
+    first_name text,
+    last_name text,
     country text,
-    zip_code text,
+    city text,
     lat text,
     lon text,
+    location 'PointType',
     age int,
     PRIMARY KEY (person_id)
 ) WITH VERTEX LABEL person;
 
-CREATE TABLE covid19.device_contact (
+CREATE TABLE IF NOT EXISTS covid19.device_contact (
     device1_id text,
     time timestamp,
     device2_id text,
@@ -41,14 +46,14 @@ CREATE TABLE covid19.device_contact (
 ) WITH CLUSTERING ORDER BY (time DESC, device2_id ASC)
 AND EDGE LABEL contact FROM device(device1_id) TO device(device2_id);
 
-CREATE MATERIALIZED VIEW covid19.device_contact_inverse AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS covid19.device_contact_inverse AS
     SELECT *
     FROM covid19.device_contact
     WHERE device2_id IS NOT NULL AND time IS NOT NULL AND device1_id IS NOT NULL
     PRIMARY KEY (device2_id, time, device1_id)
     WITH CLUSTERING ORDER BY (time DESC, device1_id ASC);
 
-CREATE TABLE covid19.person_owns_device (
+CREATE TABLE IF NOT EXISTS covid19.person_owns_device (
     person_id uuid,
     device_id text,
     claimed_on timestamp,
@@ -56,7 +61,7 @@ CREATE TABLE covid19.person_owns_device (
 ) WITH CLUSTERING ORDER BY (device_id ASC)
     AND EDGE LABEL own FROM person(person_id) TO device(device_id);
 
-CREATE MATERIALIZED VIEW covid19.device_ownedby_person AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS covid19.device_ownedby_person AS
     SELECT *
     FROM covid19.person_owns_device
     WHERE device_id IS NOT NULL AND person_id IS NOT NULL
